@@ -26,14 +26,13 @@
 
 /* Define --------------------------------------------------------------------*/
 	 
-
-
-void PWM_ENC_Init(void);
 /* Initialization and Configuration functions --------------------------------*/
+void PWM_ENC_Init(void);
 
+/* Set function --------------------------------------------------------------*/
 void PWM_Set_Freq(uint32_t freq);
 void PWM_Set_Duty(int16_t d);
-/* Set function --------------------------------------------------------------*/
+
 #ifdef __cplusplus
 }
 #endif
