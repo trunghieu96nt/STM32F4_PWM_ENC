@@ -20,10 +20,10 @@
                       ##### How to use this driver #####
  ===============================================================================
    (#) Connect pin PA1(RX) to PC6(CC1 input capture TIM3)  
-   (#) Call UART_DMA_Timeout_Init();   
-   (#) extern uint8_t rcv_message[BUFF_SIZE];
-   (#) extern bool b_UART_DMA_Timeout;           
+   (#) Call UART_DMA_Timeout_Init();             
    (#) Receive:
+       (--) extern uint8_t rcv_message[BUFF_SIZE];
+       (--) extern bool b_UART_DMA_Timeout;
        (++) Wait b_UART_DMA_Timeout flag
        (++) When b_UART_DMA_Timeout flag is true, reset flag
        (++) Handle data in rcv_message
@@ -33,7 +33,12 @@
   *
   ******************************************************************************
   * @attention
-  *
+  * (#) This driver works properly with HCLK = 168MHz
+	* (#) This driver use SystemCoreClock variable holds HCLK frequency 
+	*     and is defined in system_stm32f4xx.c file.
+	* (#) Each time the core clock (HCLK) changes, user had to call
+  *     SystemCoreClockUpdate() to update SystemCoreClock variable value.
+  *     Otherwise, any configuration based on this variable will be incorrect. 
   *
   ******************************************************************************
   */
@@ -42,14 +47,16 @@
 #include "uart_dma_timeout.h"
 #include "stdbool.h"
 
+/* Public variables ----------------------------------------------------------*/
+bool b_UART_DMA_Timeout = false; //Timeout Flag - clear by software
+uint8_t rcv_message[BUFF_SIZE]; //Contains data receive
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 static uint8_t rxbuff[BUFF_SIZE];
-/* Public variables ----------------------------------------------------------*/
-bool b_UART_DMA_Timeout = false; //Timeout Flag - clear by software
-uint8_t rcv_message[BUFF_SIZE]; //Contains data receive
+
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
@@ -172,6 +179,24 @@ void UART_DMA_Timeout_Init(void)
   GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
 	
 	/* Time base configuration - TIM3 counter clock at 10 KHz */
+	/* ---------------------------------------------------------------------------
+    In this driver TIM3 input clock (TIM3CLK) is set to 2 * APB1 clock (PCLK1), 
+    since APB1 prescaler is different from 1.   
+      TIM3CLK = 2 * PCLK1  
+      PCLK1 = HCLK / 4 
+      => TIM3CLK = HCLK / 2 = SystemCoreClock /2
+          
+    To get TIM3 counter clock at 2 KHz, the prescaler is computed as follows:
+       Prescaler = (TIM3CLK / TIM3 counter clock) - 1
+       Prescaler = ((SystemCoreClock /2) /1 KHz) - 1
+
+    Note: 
+     SystemCoreClock variable holds HCLK frequency and is defined in system_stm32f4xx.c file.
+     Each time the core clock (HCLK) changes, user had to call SystemCoreClockUpdate()
+     function to update SystemCoreClock variable value. Otherwise, any configuration
+     based on this variable will be incorrect. 
+     
+  --------------------------------------------------------------------------- */
 	uhPrescalerValue = (uint16_t) ((SystemCoreClock / 2) / 10000) - 1;
   TIM_TimeBaseInitStructure.TIM_Period = 65535; //Maximun
   TIM_TimeBaseInitStructure.TIM_Prescaler = uhPrescalerValue;
